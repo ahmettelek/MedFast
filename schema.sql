@@ -154,3 +154,34 @@ CREATE TABLE IF NOT EXISTS notifications (
   is_read BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 6. Appointments
+CREATE TABLE IF NOT EXISTS appointments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  doctor_id UUID REFERENCES doctors(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  time_slot TEXT NOT NULL,
+  status TEXT DEFAULT 'confirmed',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. Prescriptions
+CREATE TABLE IF NOT EXISTS prescriptions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  doctor_id UUID REFERENCES doctors(id) ON DELETE CASCADE,
+  diagnosis TEXT,
+  medicines JSONB, -- Stores array of {name, dosage}
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 8. Reviews
+CREATE TABLE IF NOT EXISTS reviews (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  doctor_id UUID REFERENCES doctors(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  rating NUMERIC CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
