@@ -42,21 +42,24 @@ const AppointmentConfirm = () => {
             const { error } = await supabase.from('appointments').insert([
                 {
                     doctor_id: doctor.id,
-                    date: format(date, 'yyyy-MM-dd'),
+                    date: format(new Date(date), 'yyyy-MM-dd'),
                     time_slot: slot,
                     status: 'confirmed',
                     user_id: user?.id
                 }
             ])
 
-            if (error) throw error
+            if (error) {
+                console.error('Supabase error:', error)
+                throw error
+            }
 
             // RANDEVU BİLDİRİMİ
             if (user?.id) {
                 await addNotification({
                     userId: user.id,
                     title: 'Randevu Onayı',
-                    message: `${doctor.name} (${doctor.specialty}) ile ${format(date, 'd MMMM', { locale: tr })} saat ${slot} randevunuz oluşturuldu.`,
+                    message: `${doctor.name} (${doctor.specialty}) ile ${format(new Date(date), 'd MMMM', { locale: tr })} saat ${slot} randevunuz oluşturuldu.`,
                     type: 'appointment'
                 })
             }
@@ -79,7 +82,7 @@ const AppointmentConfirm = () => {
                 <div className="bg-primary-600 p-6 text-white text-center">
                     <h3 className="text-lg font-medium opacity-90">Seçilen Randevu</h3>
                     <div className="text-3xl font-bold mt-2">
-                        {format(date, 'd MMMM yyyy', { locale: tr })}
+                        {format(new Date(date), 'd MMMM yyyy', { locale: tr })}
                     </div>
                     <div className="text-xl opacity-90 mt-1">{slot}</div>
                 </div>

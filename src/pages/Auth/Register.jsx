@@ -42,7 +42,7 @@ const Register = () => {
             if (data.user) {
                 await supabase
                     .from('profiles')
-                    .insert([{
+                    .upsert([{
                         id: data.user.id,
                         email: formData.email,
                         full_name: formData.fullName
