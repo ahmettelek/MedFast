@@ -185,3 +185,54 @@ CREATE TABLE IF NOT EXISTS reviews (
   comment TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 9. Automatic Profile Creation Trigger
+-- This ensures every user signed up in Supabase also has an entry in our profiles table.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name)
+  VALUES (new.id, new.email, new.raw_user_meta_data->>'full_name');
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 10. Row Level Security (RLS) Policies
+-- Enable RLS on all tables
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prescriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+
+-- Profiles Policies
+CREATE POLICY "Public profiles are viewable by everyone." ON profiles FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own profile." ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can update their own profile." ON profiles FOR UPDATE USING (auth.uid() = id);
+
+-- Appointments Policies
+CREATE POLICY "Users can view their own appointments." ON appointments FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert their own appointments." ON appointments FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete their own appointments." ON appointments FOR DELETE USING (auth.uid() = user_id);
+-- Permit public insertion for testing if user is null (Use with caution in production)
+CREATE POLICY "Permit public insertion for testing" ON appointments FOR INSERT WITH CHECK (true);
+
+-- Notifications Policies
+CREATE POLICY "Users can view their own notifications." ON notifications FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert their own notifications." ON notifications FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update their own notifications." ON notifications FOR UPDATE USING (auth.uid() = user_id);
+
+-- Doctors & Departments (Publicly Readable)
+ALTER TABLE doctors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE departments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public readable doctors" ON doctors FOR SELECT USING (true);
+CREATE POLICY "Public readable departments" ON departments FOR SELECT USING (true);
+
+-- RLS for prescriptions and reviews (basic)
+CREATE POLICY "Users can view their own prescriptions" ON prescriptions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can view their own reviews" ON reviews FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Anyone can view doctor reviews" ON reviews FOR SELECT USING (true);
